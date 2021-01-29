@@ -8,14 +8,36 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 import pydotplus
+# pd.set_option("display.max_rows", None, "display.max_columns", None)
 
+
+def two_features_plot(feature1, feature2, data, species):
+    penguins = data
+    concat_features = pd.concat([feature1, feature2], axis=1)
+    X_penguins = concat_features
+    y_penguins = penguins['species']
+    Xtrain, Xtest, ytrain, ytest = train_test_split(X_penguins, y_penguins, random_state=1)
+    model = GaussianNB()
+    model.fit(Xtrain, ytrain)
+    y_model = model.predict(Xtest)
+    ypred = pd.Series(y_model, name='prediction')
+    predicted = pd.concat([Xtest.reset_index(), ytest.reset_index(), ypred], axis=1)
+    plt.scatter(feature1, feature2, alpha=0.6, c=y_penguins, cmap='jet')
+    sns.scatterplot(data=data, x=feature1, y=feature2, hue=species)
+    plt.xlabel(feature1.name)
+    plt.ylabel(feature2.name)
+    plt.show()
+    print(metrics.accuracy_score(ytest, y_model))
 
 def main():
     # Loads the data into panda data frame
     penguinsData = pd.read_csv("penguins.csv")
 
+    species = penguinsData['species']
+
     # drop null or not number rows, convert categorical features to numerical
-    penguinsData = penguinsData.dropna()
+    # penguinsData = penguinsData.dropna()
+    penguinsData.fillna(penguinsData.mean(), inplace=True)
     penguinsData.sex = pd.get_dummies(penguinsData.sex)
     penguinsData.island = pd.Categorical(penguinsData.island,
                                               categories=penguinsData.island.unique()).codes
@@ -28,13 +50,18 @@ def main():
     penguins = sns.load_dataset('penguins')
     sns.pairplot(penguins, hue='species', height=1.5)
     plt.show()
+    # two_features_plot(penguinsData['bill_length_mm'], penguinsData['body_mass_g'], penguinsData, species)
+    # two_features_plot(penguinsData['bill_length_mm'], penguinsData['flipper_length_mm'], penguinsData, species)
+    # two_features_plot(penguinsData['bill_length_mm'], penguinsData['bill_depth_mm'], penguinsData, species)
+
+
+
     # We can see that we need the features bill_depth_mm and bill_length_mm there is the more separate between species.
 
     # Task 1.2
-    # 2. Train your model using 80% of the data set as your training set.
-    penguins = penguinsData
-    X_penguins = penguins.drop(['species'], axis=1)
-    y_penguins = penguins['species']
+    #2. Train your model using 80% of the data set as your training set.
+    X_penguins = penguinsData.drop(['species'], axis=1)
+    y_penguins = penguinsData['species']
     Xtrain, Xtest, ytrain, ytest = train_test_split(X_penguins, y_penguins, test_size=0.2, random_state=1)
     model = GaussianNB()
     model.fit(Xtrain, ytrain)
@@ -43,10 +70,10 @@ def main():
     predicted = pd.concat([Xtest.reset_index(), ytest.reset_index(), ypred], axis=1)
     print(metrics.accuracy_score(ytest, y_model))
     print(predicted)
-
-    # Task 1.3
-    # 3. Use a filled contour plot to show the decision distribution of your model (limit your plot axes to\n",
-    #     "the actual data boundaries +-1).
+    #
+    # # Task 1.3
+    # # 3. Use a filled contour plot to show the decision distribution of your model (limit your plot axes to\n",
+    # #     "the actual data boundaries +-1).
     def bayes_plot(df, model="gnb", spread=30):
         df.dropna()
         colors = 'seismic'
@@ -81,6 +108,7 @@ def main():
             return np.where(clf.classes_ == val)[0]
 
         Y = y.apply(numify)
+
         x_min, x_max = X.loc[:, col1].min() - 1, X.loc[:, col1].max() + 1
         y_min, y_max = X.loc[:, col2].min() - 1, X.loc[:, col2].max() + 1
         xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.2),
@@ -88,7 +116,6 @@ def main():
 
         Z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])
         if prob:
-
             Z = Z[:, 1] - Z[:, 0]
         else:
             colors = "Set1"
@@ -100,14 +127,21 @@ def main():
         plt.colorbar()
         if not prob:
             plt.clim(0, len(clf.classes_) + 3)
+
         sns.scatterplot(data=df[::spread], x=col1, y=col2, hue=target, hue_order=hueorder, palette=colors)
         fig = plt.gcf()
         fig.set_size_inches(12, 8)
         plt.show()
 
+    # input_values = pd.concat([penguinsData.bill_depth_mm, penguinsData.bill_length_mm], axis=1)
+    # target_values = penguins.species
+    # bayes_plot(pd.concat([input_values, target_values], axis=1), spread=1)
+
     input_values = pd.concat([penguinsData.bill_depth_mm, penguinsData.bill_length_mm], axis=1)
-    target_values = penguinsData.species
+    target_values = penguins.species
     bayes_plot(pd.concat([input_values, target_values], axis=1), spread=1)
+
+
 
     # print(penguinsData)
 
